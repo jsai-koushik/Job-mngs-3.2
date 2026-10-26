@@ -2,14 +2,18 @@ services:
 
   mysql:
     image: mysql:8.0
+
     environment:
-      MYSQL_ROOT_PASSWORD: koushik@9
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: smarthire_db
+
     ports:
       - "3307:3306"
+
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
@@ -18,14 +22,17 @@ services:
 
   backend:
     build: .
+
     ports:
       - "8081:8080"
+
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smarthire_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smarthire_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: koushik@9
-      JWT_SECRET: GzQbl/F95Xc5MCI65rlMr17CzFk3E7nDaznJ/Xx5PXfY4DjS9UW/ORO9JN27WxbldhDEzuwvR6Qyn7ASxRUzOg==
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+
     depends_on:
       mysql:
         condition: service_healthy
