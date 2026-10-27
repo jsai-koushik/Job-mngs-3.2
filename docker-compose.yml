@@ -1,18 +1,17 @@
+
 services:
 
+  # MySQL Database
   mysql:
     image: mysql:8.0
 
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: smarthire_db
-
-    ports:
-      - "3307:3306"
 
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
@@ -20,8 +19,13 @@ services:
       timeout: 5s
       retries: 10
 
+    restart: unless-stopped
+
+  # Spring Boot Backend
   backend:
-    build: .
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
 
     ports:
       - "8081:8080"
@@ -29,13 +33,29 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smarthire_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
 
     depends_on:
       mysql:
         condition: service_healthy
+
+    restart: unless-stopped
+
+  # React Frontend + Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
 
 volumes:
   mysql_data:
